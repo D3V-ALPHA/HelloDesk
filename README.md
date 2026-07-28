@@ -346,31 +346,43 @@ doesn't get split across two days' totals.
 
 ```mermaid
 flowchart LR
-    Req["Read/write request<br/>to teams/{teamId}/users/{uid}/..."] --> Auth{"auth != null?"}
-    Auth -- No --> Deny["❌ Denied"]
-    Auth -- Yes --> Owner{"auth.uid == uid?<br/>(writing own profile)"}
-    Owner -- Yes --> Allow1["✅ Allowed"]
-    Owner -- No --> Member{"Requester listed under<br/>teams/{teamId}/users?"}
-    Member -- Yes --> Allow2["✅ Allowed (read teammate data)"]
-    Member -- No --> FirstJoin{"Creating own new node,<br/>team didn't exist for them yet?"}
-    FirstJoin -- Yes --> Allow3["✅ Allowed (first-join case)"]
-    FirstJoin -- No --> Deny
+    ReadReq["Read request to<br/>teams/{teamId}/users/..."] --> ReadAuth{"auth != null?"}
+    ReadAuth -- No --> ReadDeny["❌ Denied"]
+    ReadAuth -- Yes --> ReadAllow["✅ Allowed<br/>(any signed-in user who<br/>knows the Team ID)"]
 
-    style Allow1 fill:#24283b,stroke:#9ece6a,color:#c0caf5
-    style Allow2 fill:#24283b,stroke:#9ece6a,color:#c0caf5
-    style Allow3 fill:#24283b,stroke:#9ece6a,color:#c0caf5
-    style Deny fill:#24283b,stroke:#e0af68,color:#c0caf5
+    WriteReq["Write request to<br/>teams/{teamId}/users/{uid}/..."] --> WriteAuth{"auth != null?"}
+    WriteAuth -- No --> WriteDeny["❌ Denied"]
+    WriteAuth -- Yes --> Owner{"auth.uid == uid?"}
+    Owner -- Yes --> WriteAllow["✅ Allowed (own profile/<br/>connections/logs)"]
+    Owner -- No --> Admin{"Requester's own<br/>profile/isAdmin == true?"}
+    Admin -- Yes --> WriteAllow
+    Admin -- No --> WriteDeny
+
+    style ReadAllow fill:#24283b,stroke:#9ece6a,color:#c0caf5
+    style WriteAllow fill:#24283b,stroke:#9ece6a,color:#c0caf5
+    style ReadDeny fill:#24283b,stroke:#e0af68,color:#c0caf5
+    style WriteDeny fill:#24283b,stroke:#e0af68,color:#c0caf5
 ```
 
 The **Team ID itself is a shared secret, not real access control** —
 security-by-obscurity until an invitation system exists (see
-[Roadmap](#roadmap)). Anyone holding the string can join. Rules restrict
-*data* access to authenticated team members; they don't gate who can learn
-the Team ID in the first place.
+[Roadmap](#roadmap)). Anyone holding the string can join and read that
+team's data; rules gate *who's authenticated*, not who's allowed to have
+learned the Team ID in the first place.
 
-> ⚠️ Rules should be tested in the Firebase Rules Playground/simulator
-> before a team trusts them with real data — see
-> [SETUP.md](SETUP.md) and `firebase.rules.json`.
+Reads are intentionally **not** gated behind "already a listed member" — an
+earlier draft of these rules required exactly that
+(`data.child(auth.uid).exists()`), which turned out to be a chicken-and-egg
+deadlock: it blocked every first-time joiner, including a team's very first
+member, since nobody has a listing yet before they've joined. The read side
+was relaxed to "any authenticated user" instead, which is consistent with
+the security-by-obscurity model above rather than a weakening of it. Writes
+still require you to own the node (or hold `isAdmin`, for removing another
+member — see [Manage Team](#status-lifecycle)).
+
+`firebase.rules.json` in this repo is the actual published, working
+ruleset — test any change in the Firebase Rules Playground/simulator before
+trusting it with real data (see [SETUP.md](SETUP.md)).
 
 ---
 
@@ -481,11 +493,15 @@ Deliberately shipped as-is for v1 — tracked, not hidden:
 - **Day-boundary uses the viewing browser's local time**, not a stored
   per-user timezone (none exists in the data model) — an approximation of
   "per-user local time," not a literal one.
-- **Security rules are still a draft** — written to the shape described in
-  SRS.md §4.4, but not yet exhaustively tested in the Firebase Rules
-  Playground. Test before trusting a team's real data to them.
 - **History data grows unbounded** — kept indefinitely in v1; fine for
   target team size near-term, export/pruning is a future consideration.
+- **No error/retry UI on real-time listeners** — if the live Firebase
+  connection drops and doesn't recover, the last-rendered view just stays
+  stuck with no visible error or reconnect affordance.
+- **Presence drops on popup close, not just browser close** — there's no
+  background worker in v1 (by design), so closing the popup ends the same
+  connection that tracks presence. Expected, not a bug: you re-click
+  Available on reopen.
 
 ---
 

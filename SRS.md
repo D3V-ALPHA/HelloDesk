@@ -480,7 +480,37 @@ were checked to confirm every name each file imports (`_getProvider`,
 `SDK_VERSION`) is present. **A prior session's claim that these files were "confirmed
 self-contained, no live gstatic references" was wrong** — grep only caught the
 metadata strings in `firebase-app.js` and missed the live imports in the other two
-files. Still needs a manual browser check to fully confirm (see CLAUDE.md).
+files. Verified working end-to-end by the user (onboarding completed successfully)
+after this fix plus the security rules fix below.
+
+**Security rules fixed and verified working (2026-07-28):** the originally-published
+rules required `data.child(auth.uid).exists()` to read `teams/{teamId}/users` — a
+chicken-and-egg deadlock blocking every first-time joiner, including the very first
+team member. The write rule also only allowed `auth.uid === $uid`, which would have
+blocked Milestone 8's admin-removes-another-member feature. Fixed rules (read relaxed
+to any authenticated user, consistent with §2.5's security-by-obscurity Team ID model;
+write given an admin-OR clause) are published, user-confirmed working, and saved as
+`firebase.rules.json` in the repo — no longer just a Milestone 1 draft.
+
+**Long-polling/CSP fix (2026-07-28):** after real usage (adding then removing a team
+member), the popup got stuck on "Loading..." with `script-src 'self'` CSP errors
+pointing at `https://...firebasedatabase.app/.lp?...` URLs. This is unrelated to the
+gstatic bug above — it's the Realtime Database client's long-polling fallback
+transport, which works by injecting remote `<script>` tags whenever its WebSocket
+connection needs to renegotiate (e.g. after a large write like a member removal).
+MV3's default CSP always blocks this, extension-wide, regardless of SDK vendoring.
+Fixed by calling `forceWebSockets()` (exported by `firebase-database.js`) in
+`js/firebase-init.js` before `getDatabase()`, so the SDK never attempts that
+fallback. No error handling exists on the `onValue` listeners to surface a stuck
+connection either — that's why the symptom was a silent infinite "Loading...", not a
+visible error. Not fixed further this pass (would need per-listener error/retry-state
+UI); flagged as a known gap below, not a hidden decision.
+
+**Repo/publishing (2026-07-28):** project pushed to
+`https://github.com/D3V-ALPHA/HelloDesk.git`. Real Firebase config
+(`js/firebase-config.js`) is gitignored; `js/firebase-config.example.js` is the
+committed template for anyone else's Firebase project (see `SETUP.md`). Shipped docs
+are `README.md`, `SETUP.md`, and this file — no other doc files are part of the repo.
 
 **Known-but-not-fixed / deferred items** (don't re-investigate from scratch, see §0/§7 for why):
 - Background notifications — deferred, not a bug.
@@ -489,4 +519,4 @@ files. Still needs a manual browser check to fully confirm (see CLAUDE.md).
 - Admin-assignment race (read-then-write, not a transaction) — low risk at target team size, not fixed.
 - No timeout/fallback in `popup.js` if a cached session's Firebase Auth session never resolves — popup stays on "Loading..." with no re-onboard path. Not fixed, flagged only.
 - Day-boundary calculation (`js/day-utils.js`) uses the *viewing browser's* local time for every user, not each user's actual stored timezone (none is stored in the data model) — an approximation of "per-user local time" per §1.3, not a literal implementation.
-- Security rules (§4.4) are still the draft from Milestone 1 — **not yet written as real rule syntax or tested in the Firebase simulator.** This is a real security gap (NFR-4) until done; needs the user's Firebase console access, so it wasn't done in this session without explicit sign-off.
+- No error/retry-state UI on real-time listeners (`onValue` calls across `popup.js`, `team-view.js`) — a persistent connection failure currently just leaves the last-rendered view stuck, with no visible error or reconnect affordance. Not fixed this pass.
