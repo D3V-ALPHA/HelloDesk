@@ -1,0 +1,14 @@
+# Real Firebase project config — never commit your own keys.
+# Copy js/firebase-config.example.js to js/firebase-config.js and fill it in.
+js/firebase-config.js
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+*.log
+
+# Editor/IDE folders
+.vscode/
+.idea/

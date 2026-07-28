@@ -1,0 +1,14 @@
+{
+  "rules": {
+    "teams": {
+      "$teamId": {
+        "users": {
+          ".read": "auth != null",
+          "$uid": {
+            ".write": "auth != null && (auth.uid === $uid || root.child('teams/' + $teamId + '/users/' + auth.uid + '/profile/isAdmin').val() === true)"
+          }
+        }
+      }
+    }
+  }
+}
