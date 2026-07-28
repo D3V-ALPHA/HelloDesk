@@ -80,7 +80,7 @@ just the "get it running" steps.
 - Set your status to Available with a "working on" note, then check the
   Team section shows it.
 - Close and reopen the popup — you should be prompted to click Available
-  again (this is expected, not a bug — see CLAUDE.md's presence notes).
+  again (this is expected, not a bug).
 - Click **History** and **Manage** to confirm both views load without
   errors.
 
@@ -91,8 +91,6 @@ either aren't published yet, or don't match `firebase.rules.json`.
 
 ## 6. Contributing
 
-- `CLAUDE.md` has working rules and current project state for anyone (human
-  or AI) picking this codebase up.
 - `SRS.md` is the source of truth for requirements and design decisions —
   read §0 (locked decisions) before proposing architecture changes.
 - Keep diffs targeted; this is a small, single-purpose tool by design (see
