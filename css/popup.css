@@ -68,6 +68,24 @@ body {
   margin: 8px 0;
 }
 
+.divider--brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.divider--brand .divider__line {
+  flex: 1;
+  height: 1px;
+  background: var(--separator);
+}
+
+.divider--brand .divider__stars {
+  color: var(--accent-available);
+  font-size: 12px;
+  letter-spacing: 2px;
+}
+
 .placeholder {
   color: var(--text-secondary);
   font-size: 12px;
