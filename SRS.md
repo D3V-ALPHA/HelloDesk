@@ -4,7 +4,7 @@
 **Date:** 2026-07-28
 **Author:** Muhammad Ali Ashraf
 
-> **Note for Claude (this file lives in the Project context):** This is the working reference for building HelloDesk. Decisions in §0 are locked — don't re-litigate them or re-propose the deferred/cut items as if they were still open, unless the user explicitly reopens one. Check §9 (Build Progress) before assuming what's already built, and update it as milestones are completed in future sessions.
+> **Note:** This is the working reference for building HelloDesk.
 
 ---
 
